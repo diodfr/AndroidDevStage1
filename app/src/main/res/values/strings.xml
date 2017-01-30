@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Stage1</string>
+    <string name="order_popularity">Popularity</string>
+    <string name="order_rated">Most rated</string>
+</resources>
