@@ -55,10 +55,11 @@ public class NetworkUtils {
         return imageUri;
     }
 
-    public static URL getAPIURL(String apiKey, boolean popular) {
+    public static URL getAPIURL(String apiKey, boolean popular, int page) {
         Uri api_key = Uri.parse(BASE_URL_DB).buildUpon()
                 .appendEncodedPath(popular ? MOVIE_POPULAR : MOVIE_RATED)
                 .appendQueryParameter("api_key", apiKey)
+                .appendQueryParameter("page", Integer.toString(page))
                 .build();
 
         try {

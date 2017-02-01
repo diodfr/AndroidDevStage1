@@ -27,6 +27,7 @@ import org.json.JSONException;
 
 import java.io.IOException;
 import java.net.URL;
+import java.util.Arrays;
 
 public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmAdapterOnClickHandler {
 
@@ -35,6 +36,8 @@ public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmA
     private TextView mError;
     private FilmAdapter filmAdapter;
     private boolean sortPopularity = true;
+    private int currentPage = 0;
+    private boolean loading = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,13 +48,32 @@ public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmA
         mError = (TextView) findViewById(R.id.errorIndicator);
 
         RecyclerView myRecyclerView = (RecyclerView) findViewById(R.id.recyclerView);
-        GridLayoutManager layoutManager = new GridLayoutManager(this, NB_OF_COLUMN, GridLayoutManager.VERTICAL, false);
+        final GridLayoutManager layoutManager = new GridLayoutManager(this, NB_OF_COLUMN, GridLayoutManager.VERTICAL, false);
         myRecyclerView.setLayoutManager(layoutManager);
 
 
         int optimumImageSize = calculateNoOfColumns(this, NB_OF_COLUMN);
         filmAdapter = new FilmAdapter(this, optimumImageSize);
         myRecyclerView.setAdapter(filmAdapter);
+
+
+        myRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
+                if (dy > 0) //check for scroll down
+                {
+                    int visibleItemCount = layoutManager.getChildCount();
+                    int totalItemCount = layoutManager.getItemCount();
+                    int pastVisiblesItems = layoutManager.findFirstVisibleItemPosition();
+
+                    if (!loading) {
+                        if ((visibleItemCount + pastVisiblesItems) >= totalItemCount * 0.7) {
+                            loadFilms();
+                        }
+                    }
+                }
+            }
+        });
 
         loadFilms();
     }
@@ -63,7 +85,8 @@ public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmA
     }
 
     private void loadFilms() {
-        new LoadFilmTask().execute(sortPopularity);
+        currentPage++;
+        new LoadFilmTask().execute(sortPopularity, currentPage);
     }
 
     @Override
@@ -74,7 +97,7 @@ public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmA
         startActivity(intent);
     }
 
-    class LoadFilmTask extends AsyncTask<Boolean, Void, ContentValues[]> {
+    class LoadFilmTask extends AsyncTask<Object, Void, ContentValues[]> {
         private static final String ERROR_KEY = "ERROR";
 
         @Override
@@ -82,11 +105,12 @@ public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmA
             super.onPreExecute();
             mLoadingIndicator.setVisibility(View.VISIBLE);
             mError.setVisibility(View.INVISIBLE);
+            loading = true;
         }
 
         @Override
-        protected ContentValues[] doInBackground(Boolean... sort) {
-            URL api = NetworkUtils.getAPIURL(getString(R.string.API_KEY), sort[0]);
+        protected ContentValues[] doInBackground(Object... params) {
+            URL api = NetworkUtils.getAPIURL(getString(R.string.API_KEY), (Boolean) params[0], (Integer) params[1]);
             try {
                 if (!isOnline()) {
                     return createError("No internet connection available.");
@@ -108,6 +132,7 @@ public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmA
         private ContentValues[] createError(String message) {
             ContentValues error = new ContentValues();
             error.put(ERROR_KEY, message);
+
             return new ContentValues[]{
                     error
             };
@@ -120,8 +145,9 @@ public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmA
                 mError.setText(results[0].getAsString(ERROR_KEY));
                 mError.setVisibility(View.VISIBLE);
             } else {
-                filmAdapter.setFilms(results);
+                filmAdapter.setFilms(Arrays.asList(results));
             }
+            loading = false;
         }
 
         private boolean isError(ContentValues[] results) {
@@ -148,6 +174,8 @@ public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmA
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == R.id.order) {
             sortPopularity = !sortPopularity;
+            currentPage = 0;
+            filmAdapter.reset();
             String newTitle = getString(sortPopularity ? R.string.order_popularity : R.string.order_rated);
             item.setTitle(newTitle);
             loadFilms();

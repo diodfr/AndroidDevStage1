@@ -4,5 +4,5 @@
     <item
         android:id="@+id/order"
         android:title="@string/order_popularity"
-        app:showAsAction="ifRoom" />
+        app:showAsAction="always" />
 </menu>

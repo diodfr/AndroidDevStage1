@@ -11,10 +11,13 @@ import com.example.didier.stage1.NetworkUtils;
 import com.example.didier.stage1.R;
 import com.squareup.picasso.Picasso;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class FilmAdapter extends RecyclerView.Adapter<FilmAdapter.FilmHolder> {
 
     private final int optimumImageSize;
-    private ContentValues[] films;
+    private List<ContentValues> films = new ArrayList<>();
 
     private final FilmAdapterOnClickHandler mClickHandler;
 
@@ -37,17 +40,21 @@ public class FilmAdapter extends RecyclerView.Adapter<FilmAdapter.FilmHolder> {
 
     @Override
     public void onBindViewHolder(FilmHolder holder, int position) {
-        holder.setFilm(films[position]);
+        holder.setFilm(films.get(position));
     }
 
     @Override
     public int getItemCount() {
-        return films != null ? films.length : 0;
+        return films.size();
     }
 
-    public void setFilms(ContentValues[] films) {
-        this.films = films;
+    public void setFilms(List<ContentValues> films) {
+        this.films.addAll(films);
         notifyDataSetChanged();
+    }
+
+    public void reset() {
+        this.films.clear();
     }
 
     class FilmHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
