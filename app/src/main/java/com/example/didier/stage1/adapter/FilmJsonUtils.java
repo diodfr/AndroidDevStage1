@@ -1,7 +1,6 @@
 package com.example.didier.stage1.adapter;
 
 import android.content.ContentValues;
-import android.content.Context;
 import android.util.Log;
 
 import org.json.JSONArray;
@@ -35,7 +34,7 @@ public final class FilmJsonUtils {
      * @return Array of Strings describing weather data
      * @throws JSONException If JSON data cannot be properly parsed
      */
-    public static ContentValues[] getMoviesFromJson(Context context, String filmJsonStr)
+    public static ContentValues[] getMoviesFromJson(String filmJsonStr)
             throws JSONException {
 
 

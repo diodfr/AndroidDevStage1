@@ -1,8 +1,10 @@
 package com.example.didier.stage1;
 
+import android.app.LoaderManager;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.content.Loader;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
@@ -29,15 +31,24 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.Arrays;
 
-public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmAdapterOnClickHandler {
+public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmAdapterOnClickHandler, LoaderManager.LoaderCallbacks<ContentValues> {
 
+    //TODO FAVORITE
+    //TODO LOADER
     public static final int NB_OF_COLUMN = 3;
+    private static final int FILM_LOADER = 100;
     private ProgressBar mLoadingIndicator;
     private TextView mError;
     private FilmAdapter filmAdapter;
     private boolean sortPopularity = true;
     private int currentPage = 0;
     private boolean loading = false;
+
+    public static int calculateNoOfColumns(Context context, int nbOfColumn) {
+        DisplayMetrics displayMetrics = context.getResources().getDisplayMetrics();
+        float dpWidth = displayMetrics.widthPixels;
+        return (int) (dpWidth / nbOfColumn);
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,12 +87,8 @@ public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmA
         });
 
         loadFilms();
-    }
 
-    public static int calculateNoOfColumns(Context context, int nbOfColumn) {
-        DisplayMetrics displayMetrics = context.getResources().getDisplayMetrics();
-        float dpWidth = displayMetrics.widthPixels;
-        return (int) (dpWidth / nbOfColumn);
+        getLoaderManager().initLoader(FILM_LOADER, null, this);
     }
 
     private void loadFilms() {
@@ -95,6 +102,49 @@ public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmA
         intent.putExtra(FilmDetailActivity.FILM, film);
 
         startActivity(intent);
+    }
+
+    @Override
+    public Loader<ContentValues> onCreateLoader(int id, Bundle args) {
+        return;
+    }
+
+    @Override
+    public void onLoadFinished(Loader<ContentValues> loader, Object data) {
+
+    }
+
+    @Override
+    public void onLoaderReset(Loader<ContentValues> loader) {
+
+    }
+
+    public boolean isOnline() {
+        ConnectivityManager cm =
+                (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo netInfo = cm.getActiveNetworkInfo();
+        return netInfo != null && netInfo.isConnectedOrConnecting();
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = new MenuInflater(this);
+        inflater.inflate(R.menu.main_activity_menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == R.id.order) {
+            sortPopularity = !sortPopularity;
+            currentPage = 0;
+            filmAdapter.reset();
+            String newTitle = getString(sortPopularity ? R.string.order_popularity : R.string.order_rated);
+            item.setTitle(newTitle);
+            loadFilms();
+        }
+
+        return true;
     }
 
     class LoadFilmTask extends AsyncTask<Object, Void, ContentValues[]> {
@@ -153,34 +203,5 @@ public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmA
         private boolean isError(ContentValues[] results) {
             return results.length == 1 && results[0].containsKey(ERROR_KEY);
         }
-    }
-
-    public boolean isOnline() {
-        ConnectivityManager cm =
-                (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo netInfo = cm.getActiveNetworkInfo();
-        return netInfo != null && netInfo.isConnectedOrConnecting();
-    }
-
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        MenuInflater inflater = new MenuInflater(this);
-        inflater.inflate(R.menu.main_activity_menu, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        if (item.getItemId() == R.id.order) {
-            sortPopularity = !sortPopularity;
-            currentPage = 0;
-            filmAdapter.reset();
-            String newTitle = getString(sortPopularity ? R.string.order_popularity : R.string.order_rated);
-            item.setTitle(newTitle);
-            loadFilms();
-        }
-
-        return true;
     }
 }
