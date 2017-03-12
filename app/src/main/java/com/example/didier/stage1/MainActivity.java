@@ -1,19 +1,20 @@
 package com.example.didier.stage1;
 
-import android.app.LoaderManager;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
-import android.content.Loader;
+import android.database.Cursor;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.CursorLoader;
+import android.support.v4.content.Loader;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -24,6 +25,7 @@ import android.widget.TextView;
 
 import com.example.didier.stage1.adapter.FilmAdapter;
 import com.example.didier.stage1.adapter.FilmJsonUtils;
+import com.example.didier.stage1.data.MovieDbContract;
 
 import org.json.JSONException;
 
@@ -31,7 +33,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.Arrays;
 
-public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmAdapterOnClickHandler, LoaderManager.LoaderCallbacks<ContentValues> {
+public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmAdapterOnClickHandler, LoaderManager.LoaderCallbacks<Cursor> {
 
     //TODO FAVORITE
     //TODO LOADER
@@ -43,12 +45,6 @@ public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmA
     private boolean sortPopularity = true;
     private int currentPage = 0;
     private boolean loading = false;
-
-    public static int calculateNoOfColumns(Context context, int nbOfColumn) {
-        DisplayMetrics displayMetrics = context.getResources().getDisplayMetrics();
-        float dpWidth = displayMetrics.widthPixels;
-        return (int) (dpWidth / nbOfColumn);
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,9 +58,7 @@ public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmA
         final GridLayoutManager layoutManager = new GridLayoutManager(this, NB_OF_COLUMN, GridLayoutManager.VERTICAL, false);
         myRecyclerView.setLayoutManager(layoutManager);
 
-
-        int optimumImageSize = calculateNoOfColumns(this, NB_OF_COLUMN);
-        filmAdapter = new FilmAdapter(this, optimumImageSize);
+        filmAdapter = new FilmAdapter(this, null, this);
         myRecyclerView.setAdapter(filmAdapter);
 
 
@@ -87,17 +81,15 @@ public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmA
         });
 
         loadFilms();
-
-        getLoaderManager().initLoader(FILM_LOADER, null, this);
     }
 
     private void loadFilms() {
-        currentPage++;
-        new LoadFilmTask().execute(sortPopularity, currentPage);
+
+        getSupportLoaderManager().initLoader(FILM_LOADER, null, this);
     }
 
     @Override
-    public void onClick(ContentValues film) {
+    public void onClick(int film) {
         Intent intent = new Intent(this, FilmDetailActivity.class);
         intent.putExtra(FilmDetailActivity.FILM, film);
 
@@ -105,18 +97,26 @@ public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmA
     }
 
     @Override
-    public Loader<ContentValues> onCreateLoader(int id, Bundle args) {
-        return;
+    public Loader<Cursor> onCreateLoader(int id, Bundle args) {
+        String sort = sortPopularity ? MovieDbContract.FavoriteEntry.COLUMN_POPULARITY : MovieDbContract.FavoriteEntry.COLUMN_VOTE_COUNT;
+        return new CursorLoader(this, MovieDbContract.FavoriteEntry.CONTENT_URI, null, null, null, sort);
     }
 
     @Override
-    public void onLoadFinished(Loader<ContentValues> loader, Object data) {
+    public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+        mLoadingIndicator.setVisibility(View.INVISIBLE);
+        data.
+        if (isError(results)) {
+            mError.setText(results[0].getAsString(ERROR_KEY));
+            mError.setVisibility(View.VISIBLE);
+        } else {
+            filmAdapter.setFilms(Arrays.asList(results));
+        }
 
     }
 
     @Override
-    public void onLoaderReset(Loader<ContentValues> loader) {
-
+    public void onLoaderReset(Loader<Cursor> loader) {
     }
 
     public boolean isOnline() {
@@ -190,13 +190,7 @@ public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmA
 
         @Override
         protected void onPostExecute(ContentValues[] results) {
-            mLoadingIndicator.setVisibility(View.INVISIBLE);
-            if (isError(results)) {
-                mError.setText(results[0].getAsString(ERROR_KEY));
-                mError.setVisibility(View.VISIBLE);
-            } else {
-                filmAdapter.setFilms(Arrays.asList(results));
-            }
+
             loading = false;
         }
 
