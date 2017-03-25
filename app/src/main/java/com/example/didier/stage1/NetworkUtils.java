@@ -1,5 +1,8 @@
 package com.example.didier.stage1;
 
+import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.util.Log;
 
@@ -17,6 +20,10 @@ public class NetworkUtils {
     private static final String BASE_URL_DB = "http://api.themoviedb.org/3";
     private static final String MOVIE_POPULAR = "movie/popular";
     private static final String MOVIE_RATED = "movie/top_rated";
+    private static final String MOVIE_DETAIL = "movie";
+    private static final String MOVIE_VIDEOS = "videos";
+    private static final String MOVIE_REVIEWS = "reviews";
+
 
     private static String getOptimumDefinition(int definition) {
         if (definition < 154) {
@@ -70,6 +77,53 @@ public class NetworkUtils {
         return null;
     }
 
+    public static URL getDetailAPIURL(String apiKey, int filmId) {
+        Uri api_key = Uri.parse(BASE_URL_DB).buildUpon()
+                .appendEncodedPath(MOVIE_DETAIL)
+                .appendEncodedPath(String.valueOf(filmId))
+                .appendQueryParameter("api_key", apiKey)
+                .build();
+
+        try {
+            return new URL(api_key.toString());
+        } catch (MalformedURLException e) {
+            Log.e(FILM_NETWORK, e.getLocalizedMessage());
+        }
+        return null;
+    }
+
+    public static URL getVideosAPIURL(String apiKey, int filmId) {
+        Uri api_key = Uri.parse(BASE_URL_DB).buildUpon()
+                .appendEncodedPath(MOVIE_DETAIL)
+                .appendEncodedPath(String.valueOf(filmId))
+                .appendEncodedPath(MOVIE_VIDEOS)
+                .appendQueryParameter("api_key", apiKey)
+                .build();
+
+        try {
+            return new URL(api_key.toString());
+        } catch (MalformedURLException e) {
+            Log.e(FILM_NETWORK, e.getLocalizedMessage());
+        }
+        return null;
+    }
+
+    public static URL getReviewsAPIURL(String apiKey, int filmId) {
+        Uri api_key = Uri.parse(BASE_URL_DB).buildUpon()
+                .appendEncodedPath(MOVIE_DETAIL)
+                .appendEncodedPath(String.valueOf(filmId))
+                .appendEncodedPath(MOVIE_REVIEWS)
+                .appendQueryParameter("api_key", apiKey)
+                .build();
+
+        try {
+            return new URL(api_key.toString());
+        } catch (MalformedURLException e) {
+            Log.e(FILM_NETWORK, e.getLocalizedMessage());
+        }
+        return null;
+    }
+
     /**
      * This method returns the entire result from the HTTP response.
      *
@@ -95,5 +149,12 @@ public class NetworkUtils {
         } finally {
             urlConnection.disconnect();
         }
+    }
+
+    public static boolean isOnline(Context context) {
+        ConnectivityManager cm =
+                (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo netInfo = cm.getActiveNetworkInfo();
+        return netInfo != null && netInfo.isConnectedOrConnecting();
     }
 }

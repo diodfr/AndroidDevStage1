@@ -1,8 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
-    <item
+    <group
         android:id="@+id/order"
+        android:checkableBehavior="single"
+        android:enabled="true"
         android:title="@string/order_popularity"
-        app:showAsAction="always" />
+        android:visible="true"
+        app:showAsAction="always|withText">
+        <item
+            android:id="@+id/order_popularity"
+            android:checkable="true"
+            android:checked="true"
+            android:enabled="true"
+            android:title="@string/order_popularity"
+            android:visible="true"
+            app:showAsAction="collapseActionView" />
+        <item
+            android:id="@+id/order_rated"
+            android:checkable="true"
+            android:enabled="true"
+            android:title="@string/order_rated"
+            android:visible="true"
+            app:showAsAction="collapseActionView" />
+        <item
+            android:id="@+id/order_favorite"
+            android:checkable="true"
+            android:enabled="true"
+            android:title="@string/order_favorite"
+            android:visible="true"
+            app:showAsAction="collapseActionView" />
+    </group>
 </menu>

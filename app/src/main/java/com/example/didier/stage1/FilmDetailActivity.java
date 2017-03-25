@@ -1,85 +1,167 @@
 package com.example.didier.stage1;
 
+import android.content.AsyncQueryHandler;
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.CursorLoader;
+import android.support.v4.content.Loader;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.View;
 import android.widget.CheckBox;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.example.didier.stage1.adapter.FilmJsonUtils;
+import com.example.didier.stage1.adapter.ReviewsAdapter;
+import com.example.didier.stage1.adapter.VideosAdapter;
 import com.example.didier.stage1.data.FavoriteFilmsContract;
+import com.example.didier.stage1.movies.MovieDbContract;
 import com.squareup.picasso.Picasso;
 
-import static com.example.didier.stage1.adapter.FilmJsonUtils.MDB_id_int;
-
-public class FilmDetailActivity extends AppCompatActivity implements View.OnClickListener {
+public class FilmDetailActivity extends AppCompatActivity implements View.OnClickListener, LoaderManager.LoaderCallbacks<Cursor> {
     public static final String FILM = "FILM";
-    private CheckBox favortite;
-    private int id;
-    private Uri uriFavorite;
+    public static final int LOADER_DETAIL = 200;
+    public static final int LOADER_VIDEO = 201;
+    public static final int LOADER_REVIEW = 202;
+    private CheckBox favorite;
     private String filmName;
+    private TextView mOriginalTitle;
+    private TextView mReleaseDate;
+    private TextView mUserRating;
+    private TextView mSynopsis;
+    private ImageView mThumbnail;
+    private int filmId;
+    private RecyclerView mVideos;
+    private RecyclerView mReviews;
+    private VideosAdapter videoAdapter;
+    private ReviewsAdapter reviewsAdapter;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_film_detail);
 
-        ContentValues values = getIntent().getParcelableExtra(FILM);
+        filmId = getIntent().getIntExtra(FILM, -1);
 
-        TextView mOriginalTitle = (TextView) findViewById(R.id.originalTitle);
-        filmName = values.getAsString(FilmJsonUtils.MDB_original_title_String);
-        mOriginalTitle.setText(filmName);
+        mOriginalTitle = (TextView) findViewById(R.id.originalTitle);
+        mReleaseDate = (TextView) findViewById(R.id.releaseDate);
+        mUserRating = (TextView) findViewById(R.id.userRating);
+        mSynopsis = (TextView) findViewById(R.id.synopsis);
+        mThumbnail = (ImageView) findViewById(R.id.thumbnailPoster);
+        favorite = (CheckBox) findViewById(R.id.favorite);
 
-        TextView mReleaseDate = (TextView) findViewById(R.id.releaseDate);
-        mReleaseDate.setText(values.getAsString(FilmJsonUtils.MDB_release_date_String));
+        favorite.setOnClickListener(this);
 
-        TextView mUserRating = (TextView) findViewById(R.id.userRating);
-        mUserRating.setText(values.getAsString(FilmJsonUtils.MDB_vote_average_Number));
+        mVideos = (RecyclerView) findViewById(R.id.videos);
+        mVideos.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false));
 
-        TextView mSynopsis = (TextView) findViewById(R.id.synopsis);
-        mSynopsis.setText(values.getAsString(FilmJsonUtils.MDB_overview_String));
+        videoAdapter = new VideosAdapter(this);
+        mVideos.setAdapter(videoAdapter);
 
-        ImageView mThumbnail = (ImageView) findViewById(R.id.thumbnailPoster);
-        String thumbnailID = values.getAsString(FilmJsonUtils.MDB_poster_path_String);
-        Picasso.with(this)
-                .load(NetworkUtils.getImageURL(thumbnailID))
-                .into(mThumbnail);
+        mReviews = (RecyclerView) findViewById(R.id.reviews);
+        mReviews.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false));
 
-        id = values.getAsInteger(MDB_id_int);
-        uriFavorite = FavoriteFilmsContract.FavoriteEntry.buildFavoriteUriWithId(id);
-        Cursor query = getContentResolver().query(uriFavorite, null, null, null, null);
+        reviewsAdapter = new ReviewsAdapter();
+        mReviews.setAdapter(reviewsAdapter);
 
-        favortite = (CheckBox) findViewById(R.id.favorite);
-        favortite.setChecked(query.getCount() > 0);
-        favortite.setOnClickListener(this);
+        getSupportLoaderManager().restartLoader(LOADER_DETAIL, null, this);
+        getSupportLoaderManager().restartLoader(LOADER_VIDEO, null, this);
+        getSupportLoaderManager().restartLoader(LOADER_REVIEW, null, this);
     }
 
     @Override
     public void onClick(View v) {
-        if (favortite.equals(v)) {
+        if (favorite.equals(v)) {
             updateFavorite();
         }
     }
 
     private void updateFavorite() {
-        Log.d(FilmDetailActivity.class.getName(), "updateFavorite => " + favortite.isChecked());
-        if (favortite.isChecked()) {
-            getContentResolver().delete(uriFavorite, null, null);
+        AsyncQueryHandler queryHandler = new AsyncQueryHandler(getContentResolver()) {
+
+        };
+
+        Log.d(FilmDetailActivity.class.getName(), "updateFavorite => " + favorite.isChecked());
+
+        Uri uriFavorite = FavoriteFilmsContract.FavoriteEntry.buildFavoriteUriWithId(filmId);
+
+        if (!favorite.isChecked()) {
+            queryHandler.startDelete(filmId, null, uriFavorite, null, null);
         } else {
             ContentValues values = new ContentValues();
-            values.put(FavoriteFilmsContract.FavoriteEntry._ID, id);
+            values.put(FavoriteFilmsContract.FavoriteEntry._ID, filmId);
 
             values.put(FavoriteFilmsContract.FavoriteEntry.COLUMN_NAME, filmName);
 
-            getContentResolver().insert(uriFavorite, values);
+            queryHandler.startInsert(filmId, null, uriFavorite, values);
         }
 
-        Log.d(FilmDetailActivity.class.getName(), "updateFavorite <= " + favortite.isChecked());
+        Log.d(FilmDetailActivity.class.getName(), "updateFavorite <= " + favorite.isChecked());
+
+    }
+
+    @Override
+    public Loader<Cursor> onCreateLoader(int id, Bundle args) {
+        Uri uri = null;
+        switch (id) {
+            case LOADER_DETAIL:
+                uri = MovieDbContract.MovieEntry.buildUriWithId(filmId);
+                break;
+            case LOADER_VIDEO:
+                uri = MovieDbContract.MovieVideo.buildUriWithId(filmId);
+                break;
+            case LOADER_REVIEW:
+                uri = MovieDbContract.MovieReview.buildUriWithId(filmId);
+                break;
+
+        }
+        return new CursorLoader(this, uri, null, null, null, null);
+    }
+
+    @Override
+    public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+        switch (loader.getId()) {
+            case LOADER_DETAIL:
+                updateDetails(data);
+                break;
+            case LOADER_VIDEO:
+                videoAdapter.setCursor(data);
+                break;
+            case LOADER_REVIEW:
+                reviewsAdapter.setCursor(data);
+                break;
+        }
+    }
+
+    private void updateDetails(Cursor values) {
+        values.moveToFirst();
+        filmName = values.getString(values.getColumnIndex(MovieDbContract.MovieEntry.COLUMN_TITLE));
+        mOriginalTitle.setText(filmName);
+
+        mReleaseDate.setText(values.getString(values.getColumnIndex(MovieDbContract.MovieEntry.COLUMN_RELEASE_DATE)));
+
+        mUserRating.setText(values.getString(values.getColumnIndex(MovieDbContract.MovieEntry.COLUMNM_VOTE_AVERAGE)));
+
+        mSynopsis.setText(values.getString(values.getColumnIndex(MovieDbContract.MovieEntry.COLUMN_OVERVIEW)));
+
+        String thumbnailID = values.getString(values.getColumnIndex(MovieDbContract.MovieEntry.COLUMN_POSTER_PATH));
+        Picasso.with(this)
+                .load(NetworkUtils.getImageURL(thumbnailID))
+                .into(mThumbnail);
+
+        int favorite = values.getInt(values.getColumnIndex(MovieDbContract.MovieEntry.COLUMNM_FAVORITE));
+        this.favorite.setChecked(favorite > 0);
+    }
+
+
+    @Override
+    public void onLoaderReset(Loader<Cursor> loader) {
 
     }
 }

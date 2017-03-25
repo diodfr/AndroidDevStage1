@@ -26,6 +26,17 @@ public final class FilmJsonUtils {
     public static final String MDB_video_Boolean = "video";
     public static final String MDB_vote_average_Number = "vote_average";
 
+    public static final String MDB_VIDEO_ID_string = "id";
+    public static final String MDB_VIDEO_KEY_string = "key";
+    public static final String MDB_VIDEO_SITE_string = "site";
+    public static final String MDB_VIDEO_NAME_string = "name";
+    public static final String MDB_VIDEO_TYPE_string = "type";
+
+    public static final String MDB_REVIEW_ID_string = "id";
+    public static final String MDB_REVIEW_AUTHOR_string = "author";
+    public static final String MDB_REVIEW_CONTENT_string = "content";
+    public static final String MDB_REVIEW_URL_string = "url";
+
     /**
      * This method parses JSON from a web response and returns an array of Strings
      * describing the Films.
@@ -60,20 +71,126 @@ public final class FilmJsonUtils {
 
         for (int i = 0; i < movies.length(); i++) {
             JSONObject movie = movies.getJSONObject(i);
-            ContentValues valueMovie = new ContentValues();
-            parsedMovieDB[i] = valueMovie;
-            retrieveString(movie, valueMovie, MDB_id_int);
-            retrieveString(movie, valueMovie, MDB_poster_path_String);
-            retrieveString(movie, valueMovie, MDB_original_title_String);
-            retrieveString(movie, valueMovie, MDB_overview_String);
-            retrieveNumber(movie, valueMovie, MDB_vote_average_Number);
-            retrieveInteger(movie, valueMovie, MDB_vote_count_Integer);
-            retrieveString(movie, valueMovie, MDB_release_date_String);
-
+            parsedMovieDB[i] = retrieveMovie(movie);
         }
 
         return parsedMovieDB;
     }
+
+    public static ContentValues[] getMovieFromJson(String filmJsonStr)
+            throws JSONException {
+
+
+        final String MDB_STATUS_MSG = "status_message";
+        final String MDB_STATUS_CODE = "status_code";
+
+        final String MDB_RESULTS = "results";
+
+        JSONObject mdbJson = new JSONObject(filmJsonStr);
+
+        /* Is there an error? */
+        if (mdbJson.has(MDB_STATUS_MSG)) {
+            int statusCode = mdbJson.getInt(MDB_STATUS_CODE);
+            String statusMessage = mdbJson.getString(MDB_STATUS_MSG);
+
+            Log.e("FILM_NETWORK", "Error (" + statusCode + ") - " + statusMessage);
+            return null;
+        }
+
+        ContentValues[] parsedMovieDB = new ContentValues[]{
+                retrieveMovie(mdbJson)
+        };
+
+        return parsedMovieDB;
+    }
+
+    private static ContentValues retrieveMovie(JSONObject movie) throws JSONException {
+        ContentValues valueMovie = new ContentValues();
+        retrieveInteger(movie, valueMovie, MDB_id_int);
+        retrieveString(movie, valueMovie, MDB_poster_path_String);
+        retrieveString(movie, valueMovie, MDB_original_title_String);
+        retrieveString(movie, valueMovie, MDB_overview_String);
+        retrieveNumber(movie, valueMovie, MDB_vote_average_Number);
+        retrieveInteger(movie, valueMovie, MDB_vote_count_Integer);
+        retrieveString(movie, valueMovie, MDB_release_date_String);
+        return valueMovie;
+    }
+
+    public static ContentValues[] getVideosFromJson(String filmJsonStr)
+            throws JSONException {
+
+
+        final String MDB_STATUS_MSG = "status_message";
+        final String MDB_STATUS_CODE = "status_code";
+
+        final String MDB_RESULTS = "results";
+
+        JSONObject mdbJson = new JSONObject(filmJsonStr);
+
+        /* Is there an error? */
+        if (mdbJson.has(MDB_STATUS_MSG)) {
+            int statusCode = mdbJson.getInt(MDB_STATUS_CODE);
+            String statusMessage = mdbJson.getString(MDB_STATUS_MSG);
+
+            Log.e("FILM_NETWORK", "Error (" + statusCode + ") - " + statusMessage);
+            return null;
+        }
+
+        JSONArray videos = mdbJson.getJSONArray(MDB_RESULTS);
+
+        ContentValues[] parsedMovieDB = new ContentValues[videos.length()];
+
+        for (int i = 0; i < videos.length(); i++) {
+            JSONObject movie = videos.getJSONObject(i);
+            ContentValues values = new ContentValues();
+            parsedMovieDB[i] = values;
+            retrieveString(movie, values, MDB_VIDEO_ID_string);
+            retrieveString(movie, values, MDB_VIDEO_KEY_string);
+            retrieveString(movie, values, MDB_VIDEO_SITE_string);
+            retrieveString(movie, values, MDB_VIDEO_NAME_string);
+            retrieveString(movie, values, MDB_VIDEO_TYPE_string);
+        }
+
+        return parsedMovieDB;
+    }
+
+    public static ContentValues[] getReviewsFromJson(String filmJsonStr)
+            throws JSONException {
+
+
+        final String MDB_STATUS_MSG = "status_message";
+        final String MDB_STATUS_CODE = "status_code";
+
+        final String MDB_RESULTS = "results";
+
+        JSONObject mdbJson = new JSONObject(filmJsonStr);
+
+        /* Is there an error? */
+        if (mdbJson.has(MDB_STATUS_MSG)) {
+            int statusCode = mdbJson.getInt(MDB_STATUS_CODE);
+            String statusMessage = mdbJson.getString(MDB_STATUS_MSG);
+
+            Log.e("FILM_NETWORK", "Error (" + statusCode + ") - " + statusMessage);
+            return null;
+        }
+
+        JSONArray reviews = mdbJson.getJSONArray(MDB_RESULTS);
+
+        ContentValues[] parsedMovieDB = new ContentValues[reviews.length()];
+
+        for (int i = 0; i < reviews.length(); i++) {
+            JSONObject review = reviews.getJSONObject(i);
+            ContentValues values = new ContentValues();
+            parsedMovieDB[i] = values;
+            retrieveString(review, values, MDB_REVIEW_ID_string);
+            retrieveString(review, values, MDB_REVIEW_AUTHOR_string);
+            retrieveString(review, values, MDB_REVIEW_CONTENT_string);
+            retrieveString(review, values, MDB_REVIEW_URL_string);
+        }
+
+        return parsedMovieDB;
+    }
+
 
     private static void retrieveInteger(JSONObject movie, ContentValues valueMovie, String fieldName) {
         int value = 0;

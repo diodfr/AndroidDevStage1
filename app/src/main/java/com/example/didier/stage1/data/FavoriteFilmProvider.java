@@ -23,9 +23,11 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.support.annotation.NonNull;
+import android.util.Log;
 
 public class FavoriteFilmProvider extends ContentProvider {
 
+    public static final String TAG = FavoriteFilmProvider.class.getName();
     public static final int CODE_FAVORITE_FILM = 100;
     public static final int CODE_FAVORITE_FILM_WITH_ID = 101;
 
@@ -198,7 +200,6 @@ public class FavoriteFilmProvider extends ContentProvider {
             case CODE_FAVORITE_FILM_WITH_ID: {
 
                 String idString = uri.getLastPathSegment();
-
                 /*
                  * The query method accepts a string array of arguments, as there may be more
                  * than one "?" in the selection statement. Even though in our case, we only have
@@ -210,7 +211,8 @@ public class FavoriteFilmProvider extends ContentProvider {
                 numRowsDeleted = mOpenHelper.getWritableDatabase().delete(
                         FavoriteFilmsContract.FavoriteEntry.TABLE_NAME,
                         FavoriteFilmsContract.FavoriteEntry._ID + " = ? ",
-                        selectionArgs);
+                        selectionArguments);
+                Log.d(TAG, "DELETE FAVORITE " + idString + " /:\\ " + numRowsDeleted);
 
                 break;
             }
@@ -239,6 +241,7 @@ public class FavoriteFilmProvider extends ContentProvider {
             case CODE_FAVORITE_FILM:
             case CODE_FAVORITE_FILM_WITH_ID: {
                 long id = db.insert(FavoriteFilmsContract.FavoriteEntry.TABLE_NAME, null, values);
+                Log.d(TAG, "ADD FAVORITE " + id + " " + values.getAsString(FavoriteFilmsContract.FavoriteEntry.COLUMN_NAME));
 
                 return FavoriteFilmsContract.FavoriteEntry.buildFavoriteUriWithId(id);
             }
