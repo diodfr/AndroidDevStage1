@@ -78,7 +78,7 @@ public class FilmAdapter extends RecyclerView.Adapter<FilmAdapter.FilmHolder> {
             super(itemView);
 
             imageView = (ImageView) itemView.findViewById(R.id.movie_poster);
-            favoriteCheck = (CheckBox) itemView.findViewById(R.id.favoritePOSTER); // FIXME UPDATE favorite
+            favoriteCheck = (CheckBox) itemView.findViewById(R.id.favoritePOSTER);
             itemView.setOnClickListener(this);
         }
 
@@ -91,15 +91,12 @@ public class FilmAdapter extends RecyclerView.Adapter<FilmAdapter.FilmHolder> {
 
 
             Picasso picasso = Picasso.with(imageView.getContext());
-            picasso.setIndicatorsEnabled(true);
-            picasso.setLoggingEnabled(true);
+            //picasso.setIndicatorsEnabled(true);
+            //picasso.setLoggingEnabled(true);
             picasso.load(NetworkUtils.getImageURL(imageId, imageWidth))
                     .into(imageView);
 
-            favoriteCheck.setEnabled(true);
             favoriteCheck.setChecked(fav);
-            favoriteCheck.setEnabled(false);
-
         }
 
         @Override

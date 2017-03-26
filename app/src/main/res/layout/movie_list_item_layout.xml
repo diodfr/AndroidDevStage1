@@ -25,7 +25,7 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="8dp"
         android:layout_marginRight="8dp"
-        android:enabled="false"
+        android:clickable="false"
         app:layout_constraintBottom_toBottomOf="@+id/movie_poster"
         app:layout_constraintRight_toRightOf="parent"
         tools:layout_constraintRight_creator="1" />
