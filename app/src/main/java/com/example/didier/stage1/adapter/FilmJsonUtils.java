@@ -1,7 +1,10 @@
 package com.example.didier.stage1.adapter;
 
 import android.content.ContentValues;
+import android.support.annotation.Nullable;
 import android.util.Log;
+
+import com.example.didier.stage1.movies.MovieDbContract;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -61,8 +64,9 @@ public final class FilmJsonUtils {
             int statusCode = mdbJson.getInt(MDB_STATUS_CODE);
             String statusMessage = mdbJson.getString(MDB_STATUS_MSG);
 
-            Log.e("FILM_NETWORK", "Error (" + statusCode + ") - " + statusMessage);
-            return null;
+            String errorCode = "Error (" + statusCode + ") - " + statusMessage;
+            Log.e("FILM_NETWORK", errorCode);
+            return createErrorContentValue(errorCode);
         }
 
         JSONArray movies = mdbJson.getJSONArray(MDB_RESULTS);
@@ -75,6 +79,15 @@ public final class FilmJsonUtils {
         }
 
         return parsedMovieDB;
+    }
+
+    @Nullable
+    private static ContentValues[] createErrorContentValue(String errorCode) {
+        ContentValues errorValue = new ContentValues();
+        errorValue.put(MovieDbContract.MovieEntry1.COLUMN_ERROR_KEY, errorCode);
+        return new ContentValues[]{
+                errorValue
+        };
     }
 
     public static ContentValues[] getMovieFromJson(String filmJsonStr)
@@ -93,8 +106,9 @@ public final class FilmJsonUtils {
             int statusCode = mdbJson.getInt(MDB_STATUS_CODE);
             String statusMessage = mdbJson.getString(MDB_STATUS_MSG);
 
-            Log.e("FILM_NETWORK", "Error (" + statusCode + ") - " + statusMessage);
-            return null;
+            String errorCode = "Error (" + statusCode + ") - " + statusMessage;
+            Log.e("FILM_NETWORK", errorCode);
+            return createErrorContentValue(errorCode);
         }
 
         ContentValues[] parsedMovieDB = new ContentValues[]{

@@ -29,10 +29,6 @@
         </activity>
 
         <provider
-            android:name=".data.FavoriteFilmProvider"
-            android:authorities="com.example.didier.stage1"
-            android:exported="false" />
-        <provider
             android:name=".movies.MovieDbProvider"
             android:authorities="com.example.didier.stage1.movies"
             android:exported="false" />

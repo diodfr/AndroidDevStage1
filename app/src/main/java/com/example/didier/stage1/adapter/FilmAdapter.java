@@ -78,14 +78,14 @@ public class FilmAdapter extends RecyclerView.Adapter<FilmAdapter.FilmHolder> {
             super(itemView);
 
             imageView = (ImageView) itemView.findViewById(R.id.movie_poster);
-            favoriteCheck = (CheckBox) itemView.findViewById(R.id.favoritePOSTER);
+            favoriteCheck = (CheckBox) itemView.findViewById(R.id.favoritePOSTER); // FIXME UPDATE favorite
             itemView.setOnClickListener(this);
         }
 
         void setFilm(Cursor cursor) {
-            movieId = cursor.getInt(cursor.getColumnIndex(MovieDbContract.MovieEntry._ID));
-            String imageId = cursor.getString(cursor.getColumnIndex(MovieDbContract.MovieEntry.COLUMN_POSTER_PATH));
-            boolean fav = cursor.getInt(cursor.getColumnIndex(MovieDbContract.MovieEntry.COLUMNM_FAVORITE)) > 0;
+            movieId = cursor.getInt(cursor.getColumnIndex(MovieDbContract.MovieEntry1._ID));
+            String imageId = cursor.getString(cursor.getColumnIndex(MovieDbContract.MovieEntry1.COLUMN_POSTER_PATH));
+            boolean fav = cursor.getInt(cursor.getColumnIndex(MovieDbContract.MovieEntry1.COLUMNM_FAVORITE)) > 0;
 
             Log.d(TAG, "image width = " + imageWidth);
 
@@ -96,7 +96,10 @@ public class FilmAdapter extends RecyclerView.Adapter<FilmAdapter.FilmHolder> {
             picasso.load(NetworkUtils.getImageURL(imageId, imageWidth))
                     .into(imageView);
 
+            favoriteCheck.setEnabled(true);
             favoriteCheck.setChecked(fav);
+            favoriteCheck.setEnabled(false);
+
         }
 
         @Override

@@ -19,9 +19,11 @@ import android.widget.TextView;
 
 import com.example.didier.stage1.adapter.ReviewsAdapter;
 import com.example.didier.stage1.adapter.VideosAdapter;
-import com.example.didier.stage1.data.FavoriteFilmsContract;
 import com.example.didier.stage1.movies.MovieDbContract;
 import com.squareup.picasso.Picasso;
+
+import java.util.HashSet;
+import java.util.Set;
 
 public class FilmDetailActivity extends AppCompatActivity implements View.OnClickListener, LoaderManager.LoaderCallbacks<Cursor> {
     public static final String FILM = "FILM";
@@ -36,10 +38,10 @@ public class FilmDetailActivity extends AppCompatActivity implements View.OnClic
     private TextView mSynopsis;
     private ImageView mThumbnail;
     private int filmId;
-    private RecyclerView mVideos;
-    private RecyclerView mReviews;
     private VideosAdapter videoAdapter;
     private ReviewsAdapter reviewsAdapter;
+    private Set<AsyncQueryHandler> queryHandlers = new HashSet<>(); // Queries handlers to prevent garbage collection
+    private String thumbnailPath;
 
 
     @Override
@@ -58,13 +60,13 @@ public class FilmDetailActivity extends AppCompatActivity implements View.OnClic
 
         favorite.setOnClickListener(this);
 
-        mVideos = (RecyclerView) findViewById(R.id.videos);
+        RecyclerView mVideos = (RecyclerView) findViewById(R.id.videos);
         mVideos.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false));
 
         videoAdapter = new VideosAdapter(this);
         mVideos.setAdapter(videoAdapter);
 
-        mReviews = (RecyclerView) findViewById(R.id.reviews);
+        RecyclerView mReviews = (RecyclerView) findViewById(R.id.reviews);
         mReviews.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false));
 
         reviewsAdapter = new ReviewsAdapter();
@@ -84,20 +86,35 @@ public class FilmDetailActivity extends AppCompatActivity implements View.OnClic
 
     private void updateFavorite() {
         AsyncQueryHandler queryHandler = new AsyncQueryHandler(getContentResolver()) {
+            @Override
+            protected void onDeleteComplete(int token, Object cookie, int result) {
+                super.onDeleteComplete(token, cookie, result);
+                queryHandlers.remove(this);
+            }
 
+            @Override
+            protected void onInsertComplete(int token, Object cookie, Uri uri) {
+                super.onInsertComplete(token, cookie, uri);
+                queryHandlers.remove(this);
+            }
         };
+
+        queryHandlers.add(queryHandler);
 
         Log.d(FilmDetailActivity.class.getName(), "updateFavorite => " + favorite.isChecked());
 
-        Uri uriFavorite = FavoriteFilmsContract.FavoriteEntry.buildFavoriteUriWithId(filmId);
+        Uri uriFavorite = MovieDbContract.MovieEntry1.buildUriWithId(filmId);
 
         if (!favorite.isChecked()) {
             queryHandler.startDelete(filmId, null, uriFavorite, null, null);
         } else {
             ContentValues values = new ContentValues();
-            values.put(FavoriteFilmsContract.FavoriteEntry._ID, filmId);
+            values.put(MovieDbContract.MovieEntry1._ID, filmId);
 
-            values.put(FavoriteFilmsContract.FavoriteEntry.COLUMN_NAME, filmName);
+            values.put(MovieDbContract.MovieEntry1.COLUMN_TITLE, filmName);
+            values.put(MovieDbContract.MovieEntry1.COLUMN_POSTER_PATH, thumbnailPath);
+            values.put(MovieDbContract.MovieEntry1.COLUMN_TITLE, filmName);
+            values.put(MovieDbContract.MovieEntry1.COLUMNM_FAVORITE, 1);
 
             queryHandler.startInsert(filmId, null, uriFavorite, values);
         }
@@ -111,7 +128,7 @@ public class FilmDetailActivity extends AppCompatActivity implements View.OnClic
         Uri uri = null;
         switch (id) {
             case LOADER_DETAIL:
-                uri = MovieDbContract.MovieEntry.buildUriWithId(filmId);
+                uri = MovieDbContract.MovieDetailEntry.buildUriWithId(filmId);
                 break;
             case LOADER_VIDEO:
                 uri = MovieDbContract.MovieVideo.buildUriWithId(filmId);
@@ -141,21 +158,21 @@ public class FilmDetailActivity extends AppCompatActivity implements View.OnClic
 
     private void updateDetails(Cursor values) {
         values.moveToFirst();
-        filmName = values.getString(values.getColumnIndex(MovieDbContract.MovieEntry.COLUMN_TITLE));
+        filmName = values.getString(values.getColumnIndex(MovieDbContract.MovieDetailEntry.COLUMN_TITLE));
         mOriginalTitle.setText(filmName);
 
-        mReleaseDate.setText(values.getString(values.getColumnIndex(MovieDbContract.MovieEntry.COLUMN_RELEASE_DATE)));
+        mReleaseDate.setText(values.getString(values.getColumnIndex(MovieDbContract.MovieDetailEntry.COLUMN_RELEASE_DATE)));
 
-        mUserRating.setText(values.getString(values.getColumnIndex(MovieDbContract.MovieEntry.COLUMNM_VOTE_AVERAGE)));
+        mUserRating.setText(values.getString(values.getColumnIndex(MovieDbContract.MovieDetailEntry.COLUMNM_VOTE_AVERAGE)));
 
-        mSynopsis.setText(values.getString(values.getColumnIndex(MovieDbContract.MovieEntry.COLUMN_OVERVIEW)));
+        mSynopsis.setText(values.getString(values.getColumnIndex(MovieDbContract.MovieDetailEntry.COLUMN_OVERVIEW)));
 
-        String thumbnailID = values.getString(values.getColumnIndex(MovieDbContract.MovieEntry.COLUMN_POSTER_PATH));
+        thumbnailPath = values.getString(values.getColumnIndex(MovieDbContract.MovieDetailEntry.COLUMN_POSTER_PATH));
         Picasso.with(this)
-                .load(NetworkUtils.getImageURL(thumbnailID))
+                .load(NetworkUtils.getImageURL(thumbnailPath))
                 .into(mThumbnail);
 
-        int favorite = values.getInt(values.getColumnIndex(MovieDbContract.MovieEntry.COLUMNM_FAVORITE));
+        int favorite = values.getInt(values.getColumnIndex(MovieDbContract.MovieDetailEntry.COLUMNM_FAVORITE));
         this.favorite.setChecked(favorite > 0);
     }
 

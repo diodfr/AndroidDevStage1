@@ -33,7 +33,7 @@ public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmA
     private ProgressBar mLoadingIndicator;
     private FilmAdapter filmAdapter;
     private boolean loading = false;
-    private SORT_TYPE sort = SORT_TYPE.POPULARITY;
+    private MovieDbContract.SORT_TYPE sort = MovieDbContract.SORT_TYPE.POPULARITY;
 
     public static int calculateNoOfColumns(Context context, int nbOfColumn) {
         DisplayMetrics displayMetrics = context.getResources().getDisplayMetrics();
@@ -104,7 +104,7 @@ public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmA
         mLoadingIndicator.setVisibility(View.VISIBLE);
         mError.setVisibility(View.INVISIBLE);
 
-        return new CursorLoader(this, MovieDbContract.MovieEntry.CONTENT_URI, null, null, null, sort.columnName);
+        return new CursorLoader(this, MovieDbContract.MovieEntry1.CONTENT_URI, null, null, null, sort.columnName);
     }
 
     @Override
@@ -124,11 +124,11 @@ public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmA
 
     private String getErrorMsg(Cursor data) {
         if (data == null) return getString(R.string.UNKNON_ERROR);
-        return data.getString(data.getColumnIndex(MovieDbContract.MovieEntry.COLUMN_ERROR_KEY));
+        return data.getString(data.getColumnIndex(MovieDbContract.MovieEntry1.COLUMN_ERROR_KEY));
     }
 
     private boolean isError(Cursor data) {
-        return data == null || data.getColumnIndex(MovieDbContract.MovieEntry.COLUMN_ERROR_KEY) >= 0;
+        return data == null || data.getColumnIndex(MovieDbContract.MovieEntry1.COLUMN_ERROR_KEY) >= 0;
     }
 
     @Override
@@ -151,7 +151,7 @@ public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmA
         if (item.getGroupId() == R.id.order) {
             filmAdapter.reset();
 
-            sort = SORT_TYPE.byMenuId(item.getItemId());
+            sort = MovieDbContract.SORT_TYPE.byMenuId(item.getItemId());
 
             // FIXME String newTitle = item.getTitle().toString();
 
@@ -164,29 +164,4 @@ public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmA
     public int getImageWidth() {
         return calculateNoOfColumns(this, 3);
     }
-
-    enum SORT_TYPE {
-        POPULARITY(R.id.order_popularity, R.string.order_popularity, MovieDbContract.MovieEntry.COLUMN_POPULARITY),
-        MOST_RATED(R.id.order_rated, R.string.order_rated, MovieDbContract.MovieEntry.COLUMNM_VOTE_AVERAGE),
-        FAVORITE(R.id.order_favorite, R.string.order_favorite, MovieDbContract.MovieEntry.COLUMNM_FAVORITE);
-
-        public final int menuId;
-        public final int menuName;
-        public final String columnName;
-
-        SORT_TYPE(int menuId, int menuName, String columnName) {
-            this.menuId = menuId;
-            this.menuName = menuName;
-            this.columnName = columnName;
-        }
-
-        public static SORT_TYPE byMenuId(int itemId) {
-            for (SORT_TYPE type : SORT_TYPE.values()) {
-                if (type.menuId == itemId) return type;
-            }
-
-            return POPULARITY;
-        }
-    }
-
 }

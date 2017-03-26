@@ -19,13 +19,13 @@ import android.content.ContentProvider;
 import android.content.ContentValues;
 import android.content.UriMatcher;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.support.annotation.NonNull;
 import android.util.Log;
 
 import com.example.didier.stage1.NetworkUtils;
 import com.example.didier.stage1.R;
-import com.example.didier.stage1.data.FavoriteFilmsContract;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -34,16 +34,20 @@ import java.util.Set;
 
 public class MovieDbProvider extends ContentProvider {
 
+    public static final String TAG = MovieDbProvider.class.getName();
+
     public static final int CODE_MOVIEDB = 100;
     public static final int CODE_MOVIEDB_WITH_ID = 101;
+    public static final int CODE_MOVIEDB_DETAIL_WITH_ID = 102;
     public static final int CODE_MOVIEDB_WITH_ID_VIDEOS = 200;
     public static final int CODE_MOVIEDB_WITH_ID_REVIEWS = 201;
-    public static final String TAG = MovieDbProvider.class.getName();
 
     private static final UriMatcher sUriMatcher = buildUriMatcher();
     private List<List<Object>> films = new ArrayList<>();
     private int currentPage = 0;
     private String currentSort;
+
+    private MovieDbHelper mOpenHelper;
 
     public static UriMatcher buildUriMatcher() {
 
@@ -53,6 +57,7 @@ public class MovieDbProvider extends ContentProvider {
         matcher.addURI(authority, MovieDbContract.PATH_MOVIES, CODE_MOVIEDB);
 
         matcher.addURI(authority, MovieDbContract.PATH_MOVIES + "/#", CODE_MOVIEDB_WITH_ID);
+        matcher.addURI(authority, MovieDbContract.PATH_MOVIE_DETAILS + "/#", CODE_MOVIEDB_DETAIL_WITH_ID);
         matcher.addURI(authority, MovieDbContract.PATH_VIDEOS + "/#", CODE_MOVIEDB_WITH_ID_VIDEOS);
         matcher.addURI(authority, MovieDbContract.PATH_REVIEWS + "/#", CODE_MOVIEDB_WITH_ID_REVIEWS);
 
@@ -61,6 +66,7 @@ public class MovieDbProvider extends ContentProvider {
 
     @Override
     public boolean onCreate() {
+        mOpenHelper = new MovieDbHelper(getContext());
         return true;
     }
 
@@ -82,6 +88,19 @@ public class MovieDbProvider extends ContentProvider {
         switch (sUriMatcher.match(uri)) {
 
             case CODE_MOVIEDB_WITH_ID: {
+                String idString = uri.getLastPathSegment();
+                cursor = mOpenHelper.getReadableDatabase().query(
+                        MovieDbContract.MovieEntry1.TABLE_NAME,
+                        projection,
+                        MovieDbContract.MovieEntry1._ID + " = ?",
+                        new String[]{idString},
+                        null,
+                        null,
+                        sortOrder);
+                break;
+            }
+
+            case CODE_MOVIEDB_DETAIL_WITH_ID: {
                 cursor = getDetails(Integer.valueOf(uri.getLastPathSegment()));
 
                 break;
@@ -89,12 +108,24 @@ public class MovieDbProvider extends ContentProvider {
 
 
             case CODE_MOVIEDB: {
-                if (this.currentSort == null || this.currentSort.equals(sortOrder)) {
-                    this.currentSort = sortOrder;
-                    currentPage = 0;
+                if (MovieDbContract.SORT_TYPE.FAVORITE.columnName.equals(sortOrder)) {
+                    cursor = mOpenHelper.getReadableDatabase().query(
+                            MovieDbContract.MovieEntry1.TABLE_NAME,
+                            projection,
+                            selection,
+                            selectionArgs,
+                            null,
+                            null,
+                            null);
+                } else {
+                    if (this.currentSort == null || this.currentSort.equals(sortOrder)) {
+                        this.currentSort = sortOrder;
+                        currentPage = 0;
+                    }
+
+                    updateFilms();
+                    cursor = MovieVolatileDbHelper.createCursor(films);
                 }
-                updateFilms();
-                cursor = MovieDbHelper.createCursor(films);
                 break;
             }
 
@@ -112,39 +143,39 @@ public class MovieDbProvider extends ContentProvider {
                 throw new UnsupportedOperationException("Unknown uri: " + uri);
         }
 
-        cursor.setNotificationUri(getContext().getContentResolver(), uri);
+        if (getContext() != null && cursor != null)
+            cursor.setNotificationUri(getContext().getContentResolver(), uri);
         return cursor;
     }
 
     private Cursor getVideos(int filmId) {
-        if (NetworkUtils.isOnline(getContext())) {
+        if (getContext() != null && NetworkUtils.isOnline(getContext())) {
             String apiKey = getContext().getString(R.string.API_KEY);
-            ContentValues[] contentValues = MovieDbHelper.loadVideos(apiKey, filmId);
-            return MovieDbHelper.createVideosCursor(contentValues);
+            ContentValues[] contentValues = MovieVolatileDbHelper.loadVideos(apiKey, filmId);
+            return MovieVolatileDbHelper.createVideosCursor(contentValues);
         }
 
         return null;
     }
 
     private Cursor getReviews(int filmId) {
-        if (NetworkUtils.isOnline(getContext())) {
+        if (getContext() != null && NetworkUtils.isOnline(getContext())) {
             String apiKey = getContext().getString(R.string.API_KEY);
-            ContentValues[] contentValues = MovieDbHelper.loadReviews(apiKey, filmId);
-            return MovieDbHelper.createReviewsCursor(contentValues);
+            ContentValues[] contentValues = MovieVolatileDbHelper.loadReviews(apiKey, filmId);
+            return MovieVolatileDbHelper.createReviewsCursor(contentValues);
         }
 
         return null;
     }
 
     private void updateFilms() {
-        //FIXME SORT BY FAVORITES
-        if (NetworkUtils.isOnline(getContext())) {
+        if (getContext() != null && NetworkUtils.isOnline(getContext())) {
             String apiKey = getContext().getString(R.string.API_KEY);
 
-            ContentValues[] contentValues = MovieDbHelper.loadFilms(apiKey, MovieDbContract.MovieEntry.COLUMN_POPULARITY.equals(currentSort), currentPage + 1);
+            ContentValues[] contentValues = MovieVolatileDbHelper.loadFilms(apiKey, MovieDbContract.SORT_TYPE.POPULARITY.columnName.equals(currentSort), currentPage + 1);
             Set<Integer> favorites = getFavorites();
-            MovieDbHelper.updateFavorites(films, favorites);
-            List<List<Object>> convertFilms = MovieDbHelper.convertFilms(contentValues, favorites);
+            MovieVolatileDbHelper.updateFavorites(films, favorites);
+            List<List<Object>> convertFilms = MovieVolatileDbHelper.convertFilms(contentValues, favorites);
             films.addAll(convertFilms);
             currentPage++;
             Log.d(TAG, "--->" + films.size());
@@ -152,12 +183,12 @@ public class MovieDbProvider extends ContentProvider {
     }
 
     private Cursor getDetails(int filmId) {
-        if (NetworkUtils.isOnline(getContext())) {
+        if (getContext() != null && NetworkUtils.isOnline(getContext())) {
             String apiKey = getContext().getString(R.string.API_KEY);
-            ContentValues[] contentValues = MovieDbHelper.loadDetails(apiKey, filmId);
+            ContentValues[] contentValues = MovieVolatileDbHelper.loadDetails(apiKey, filmId);
             boolean favorite = isFavorite(filmId);
 
-            return MovieDbHelper.createDetailCursor(contentValues, favorite);
+            return MovieVolatileDbHelper.createDetailCursor(contentValues, favorite);
         }
 
         return null;
@@ -173,7 +204,27 @@ public class MovieDbProvider extends ContentProvider {
      */
     @Override
     public int delete(@NonNull Uri uri, String selection, String[] selectionArgs) {
-        throw new RuntimeException("We are not implementing update in Sunshine");
+        int numRowsDeleted = 0;
+
+        switch (sUriMatcher.match(uri)) {
+            case CODE_MOVIEDB_WITH_ID:
+                String idString = uri.getLastPathSegment();
+                String[] selectionArguments = new String[]{idString};
+
+                numRowsDeleted = mOpenHelper.getWritableDatabase().delete(
+                        MovieDbContract.MovieEntry1.TABLE_NAME,
+                        MovieDbContract.MovieEntry1._ID + " = ? ",
+                        selectionArguments);
+                Log.d(TAG, "DELETE FAVORITE " + idString + " /:\\ " + numRowsDeleted);
+
+        }
+
+        /* If we actually deleted any rows, notify that a change has occurred to this URI */
+        if (numRowsDeleted != 0 && getContext() != null) {
+            getContext().getContentResolver().notifyChange(uri, null);
+        }
+
+        return numRowsDeleted;
     }
 
     @Override
@@ -183,8 +234,19 @@ public class MovieDbProvider extends ContentProvider {
 
     @Override
     public Uri insert(@NonNull Uri uri, ContentValues values) {
-        throw new RuntimeException("We are not implementing update in Sunshine");
 
+        switch (sUriMatcher.match(uri)) {
+            case CODE_MOVIEDB_WITH_ID: {
+                final SQLiteDatabase db = mOpenHelper.getWritableDatabase();
+                long id = db.insert(MovieDbContract.MovieEntry1.TABLE_NAME, null, values);
+                Log.d(TAG, "ADD FAVORITE " + id + " " + values.getAsString(MovieDbContract.MovieEntry1.COLUMN_TITLE));
+
+                return MovieDbContract.MovieEntry1.buildUriWithId(id);
+            }
+
+            default:
+                throw new RuntimeException("We are not implementing getType in Movie db.");
+        }
     }
 
     @Override
@@ -194,21 +256,37 @@ public class MovieDbProvider extends ContentProvider {
 
     public Set<Integer> getFavorites() {
         Set<Integer> favorites = new HashSet<>();
-        Cursor favoritesCursor = getContext().getContentResolver().query(FavoriteFilmsContract.FavoriteEntry.CONTENT_URI, null, null, null, null);
-
-        int idColumn = favoritesCursor.getColumnIndex(FavoriteFilmsContract.FavoriteEntry._ID);
-
-        while (favoritesCursor.moveToNext()) {
-            favorites.add(favoritesCursor.getInt(idColumn));
+        Cursor favoritesCursor = query(MovieDbContract.MovieEntry1.CONTENT_URI, null, null, null, MovieDbContract.SORT_TYPE.FAVORITE.columnName);
+        if (favoritesCursor == null) {
+            Log.e(TAG, "empty cursor");
+            return favorites;
         }
 
-        return favorites;
+        try {
+
+            int idColumn = favoritesCursor.getColumnIndex(MovieDbContract.MovieEntry1._ID);
+            if (idColumn < 0) {
+                Log.e(TAG, "id column is not available");
+                return favorites;
+            }
+
+            while (favoritesCursor.moveToNext()) {
+                favorites.add(favoritesCursor.getInt(idColumn));
+            }
+
+            return favorites;
+        } finally {
+            favoritesCursor.close();
+        }
     }
 
     public boolean isFavorite(int filmId) {
-        Set<Integer> favorites = new HashSet<>();
-        Cursor favoritesCursor = getContext().getContentResolver().query(FavoriteFilmsContract.FavoriteEntry.buildFavoriteUriWithId(filmId), null, null, null, null);
-
-        return favoritesCursor.moveToFirst();
+        Cursor favoritesCursor = query(MovieDbContract.MovieEntry1.CONTENT_URI, null, MovieDbContract.MovieEntry1._ID + " = ?", new String[]{String.valueOf(filmId)}, MovieDbContract.SORT_TYPE.FAVORITE.columnName);
+        if (favoritesCursor == null) return false;
+        try {
+            return favoritesCursor.moveToFirst();
+        } finally {
+            favoritesCursor.close();
+        }
     }
 }
