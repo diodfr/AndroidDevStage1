@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.os.Bundle;
+import android.os.Parcelable;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
@@ -27,6 +28,7 @@ import com.example.didier.stage1.movies.MovieDbContract;
 public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmAdapterOnClickHandler, LoaderManager.LoaderCallbacks<Cursor> {
 
     public static final int NB_OF_COLUMN = 3;
+    public static final String SCROLL_POSTION = "ScrollPostion";
     private static final int FILM_LOADER = 100;
     private static final String TAG = MainActivity.class.getName();
     private static final String SORT = "SORT_BACKUP_KEY";
@@ -35,6 +37,7 @@ public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmA
     private FilmAdapter filmAdapter;
     private boolean loading = false;
     private MovieDbContract.SORT_TYPE sort = MovieDbContract.SORT_TYPE.POPULARITY;
+    private RecyclerView myRecyclerView;
 
     public static int calculateNoOfColumns(Context context, int nbOfColumn) {
         DisplayMetrics displayMetrics = context.getResources().getDisplayMetrics();
@@ -53,7 +56,7 @@ public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmA
         mLoadingIndicator = (ProgressBar) findViewById(R.id.loadingIndicator);
         mError = (TextView) findViewById(R.id.errorIndicator);
 
-        RecyclerView myRecyclerView = (RecyclerView) findViewById(R.id.recyclerView);
+        myRecyclerView = (RecyclerView) findViewById(R.id.recyclerView);
         final GridLayoutManager layoutManager = new GridLayoutManager(this, NB_OF_COLUMN, GridLayoutManager.VERTICAL, false);
         myRecyclerView.setLayoutManager(layoutManager);
 
@@ -89,10 +92,21 @@ public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmA
     }
 
     @Override
+    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+
+        if (savedInstanceState != null) {
+            Parcelable savedRecyclerLayoutState = savedInstanceState.getParcelable(SCROLL_POSTION);
+            myRecyclerView.getLayoutManager().onRestoreInstanceState(savedRecyclerLayoutState);
+        }
+    }
+
+    @Override
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
 
         storeSort();
+        outState.putParcelable(SCROLL_POSTION, myRecyclerView.getLayoutManager().onSaveInstanceState());
     }
 
     private void storeSort() {
