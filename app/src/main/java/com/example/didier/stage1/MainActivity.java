@@ -29,6 +29,7 @@ public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmA
     public static final int NB_OF_COLUMN = 3;
     private static final int FILM_LOADER = 100;
     private static final String TAG = MainActivity.class.getName();
+    private static final String SORT = "SORT_BACKUP_KEY";
     private TextView mError;
     private ProgressBar mLoadingIndicator;
     private FilmAdapter filmAdapter;
@@ -44,6 +45,9 @@ public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmA
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        restoreSort();
+
         setContentView(R.layout.activity_main);
 
         mLoadingIndicator = (ProgressBar) findViewById(R.id.loadingIndicator);
@@ -78,6 +82,24 @@ public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmA
         loadFilms();
     }
 
+    private void restoreSort() {
+        String sortString = getPreferences(MODE_PRIVATE).getString(SORT, MovieDbContract.SORT_TYPE.POPULARITY.name());
+        sort = MovieDbContract.SORT_TYPE.valueOf(sortString);
+        Log.i(TAG, "restoreSort : " + (sortString != null ? sortString : "NULL") + "/" + sort.name());
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+
+        storeSort();
+    }
+
+    private void storeSort() {
+        Log.i(TAG, "storeSort : " + sort.name());
+        getPreferences(MODE_PRIVATE).edit().putString(SORT, sort.name()).apply();
+    }
+
     private void loadFilms() {
         if (NetworkUtils.isOnline(this)) {
             mError.setVisibility(View.INVISIBLE);
@@ -92,6 +114,7 @@ public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmA
 
     @Override
     public void onClick(int film) {
+        storeSort();
         Intent intent = new Intent(this, FilmDetailActivity.class);
         intent.putExtra(FilmDetailActivity.FILM, film);
 
@@ -100,9 +123,11 @@ public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmA
 
     @Override
     public Loader<Cursor> onCreateLoader(int id, Bundle args) {
-        Log.e(TAG, "onCreateLoader");
+        Log.i(TAG, "onCreateLoader");
         mLoadingIndicator.setVisibility(View.VISIBLE);
         mError.setVisibility(View.INVISIBLE);
+
+        Log.i(TAG, "Create Loader " + sort + " columnName " + sort.columnName);
 
         return new CursorLoader(this, MovieDbContract.MovieEntry1.CONTENT_URI, null, null, null, sort.columnName);
     }
@@ -142,19 +167,31 @@ public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmA
         MenuInflater inflater = new MenuInflater(this);
         inflater.inflate(R.menu.main_activity_menu, menu);
 
+
         return true;
+    }
+
+    @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        Log.i(TAG, "sort selection " + sort.name());
+        for (int i = 0; i < menu.size(); i++) {
+            MenuItem item = menu.getItem(i);
+            item.setChecked(item.getItemId() == sort.menuId);
+        }
+
+        return super.onPrepareOptionsMenu(menu);
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
 
-        if (item.getGroupId() == R.id.order) {
+        if (item.isChecked()) {
+            item.setChecked(false);
+        } else {
+            item.setChecked(true);
             filmAdapter.reset();
-
             sort = MovieDbContract.SORT_TYPE.byMenuId(item.getItemId());
-
-            // FIXME String newTitle = item.getTitle().toString();
-
+            Log.i(TAG, "Selected sort " + sort);
             loadFilms();
         }
 

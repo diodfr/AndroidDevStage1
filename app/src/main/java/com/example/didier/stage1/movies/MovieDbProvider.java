@@ -118,11 +118,13 @@ public class MovieDbProvider extends ContentProvider {
                             null,
                             null);
                 } else {
-                    if (this.currentSort == null || this.currentSort.equals(sortOrder)) {
+                    if (this.currentSort == null || !this.currentSort.equals(sortOrder)) {
                         this.currentSort = sortOrder;
                         currentPage = 0;
+                        films.clear();
                     }
 
+                    Log.d(TAG, "update film => " + currentSort + " page " + currentPage);
                     updateFilms();
                     cursor = MovieVolatileDbHelper.createCursor(films);
                 }
