@@ -18,6 +18,7 @@ package com.example.didier.stage1.movies;
 import android.content.ContentProvider;
 import android.content.ContentValues;
 import android.content.UriMatcher;
+import android.content.res.Configuration;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
@@ -66,8 +67,15 @@ public class MovieDbProvider extends ContentProvider {
 
     @Override
     public boolean onCreate() {
+        Log.d(TAG, "onCreate");
         mOpenHelper = new MovieDbHelper(getContext());
         return true;
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        Log.d(TAG, "onConfigurationChanged");
+        super.onConfigurationChanged(newConfig);
     }
 
     @Override

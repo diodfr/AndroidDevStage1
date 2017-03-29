@@ -24,7 +24,6 @@ import com.example.didier.stage1.adapter.FilmAdapter;
 import com.example.didier.stage1.movies.MovieDbContract;
 
 
-
 public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmAdapterOnClickHandler, LoaderManager.LoaderCallbacks<Cursor> {
 
     public static final int NB_OF_COLUMN = 3;
@@ -38,6 +37,7 @@ public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmA
     private boolean loading = false;
     private MovieDbContract.SORT_TYPE sort = MovieDbContract.SORT_TYPE.POPULARITY;
     private RecyclerView myRecyclerView;
+    private Parcelable savedRecyclerLayoutState;
 
     public static int calculateNoOfColumns(Context context, int nbOfColumn) {
         DisplayMetrics displayMetrics = context.getResources().getDisplayMetrics();
@@ -71,7 +71,8 @@ public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmA
                 {
                     int visibleItemCount = layoutManager.getChildCount();
                     int totalItemCount = layoutManager.getItemCount();
-                    int pastVisiblesItems = layoutManager.findFirstVisibleItemPosition();
+
+                    int pastVisiblesItems = layoutManager.findLastCompletelyVisibleItemPosition();
 
                     if (!loading) {
                         if ((visibleItemCount + pastVisiblesItems) >= totalItemCount * 0.7) {
@@ -96,8 +97,7 @@ public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmA
         super.onRestoreInstanceState(savedInstanceState);
 
         if (savedInstanceState != null) {
-            Parcelable savedRecyclerLayoutState = savedInstanceState.getParcelable(SCROLL_POSTION);
-            myRecyclerView.getLayoutManager().onRestoreInstanceState(savedRecyclerLayoutState);
+            savedRecyclerLayoutState = savedInstanceState.getParcelable(SCROLL_POSTION);
         }
     }
 
@@ -159,6 +159,11 @@ public class MainActivity extends AppCompatActivity implements FilmAdapter.FilmA
             filmAdapter.setFilms(data, getImageWidth());
         }
         loading = false;
+
+        if (savedRecyclerLayoutState != null) {
+            myRecyclerView.getLayoutManager().onRestoreInstanceState(savedRecyclerLayoutState);
+            savedRecyclerLayoutState = null;
+        }
     }
 
     private String getErrorMsg(Cursor data) {

@@ -1,7 +1,6 @@
 package com.example.didier.stage1.adapter;
 
 import android.app.Activity;
-import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
@@ -11,6 +10,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.example.didier.stage1.R;
 import com.example.didier.stage1.movies.MovieDbContract;
@@ -89,12 +89,17 @@ public class VideosAdapter extends RecyclerView.Adapter<VideosAdapter.VideoHolde
 
         @Override
         public void onClick(View v) {
-            try {
-                Intent appIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("vnd.youtube:" + key));
+            Intent appIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("vnd.youtube:" + key));
+
+            if (appIntent.resolveActivity(v.getContext().getPackageManager()) != null) {
                 activity.startActivity(appIntent);
-            } catch (ActivityNotFoundException ex) {
+            } else {
                 Intent webIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://www.youtube.com/watch?v=" + key));
-                activity.startActivity(webIntent);
+                if (webIntent.resolveActivity(v.getContext().getPackageManager()) != null) {
+                    activity.startActivity(webIntent);
+                } else {
+                    Toast.makeText(v.getContext(), R.string.VIDEO_APPLICATION_ERROR, Toast.LENGTH_LONG).show();
+                }
             }
         }
     }
